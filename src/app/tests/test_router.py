@@ -1,17 +1,23 @@
 import pytest
-from httpx import AsyncClient
 
+from httpx import AsyncClient
+from unittest.mock import patch
+from app.schemas import Channel
 from main import app
 
 
 @pytest.mark.asyncio
 async def test_get_telemetry(ac:AsyncClient):
-    response = await ac.get("/channels/info/1")
+    channel = Channel
+    channel.number = 5
+    channel.voltage = 4
+    channel.amperage = 1
+    with patch('app.router.ps.is_connected', return_value=True):
+         with patch('app.router.get_channel_info', return_value=channel):
+            response = await ac.get("/channels/info/1")
     assert response.status_code == 200
     data = response.json()
-    assert data["number"] == 1
-    assert data["amperage"] == 0.0
-    assert data["voltage"] == 0.0
+    assert data == {'number': 5, 'amperage': 1.0,  'voltage': 4.0}
 
 
 @pytest.mark.asyncio
@@ -24,7 +30,8 @@ async def test_turn_channel_on(ac:AsyncClient):
 
 @pytest.mark.asyncio
 async def test_turn_channel_off(ac:AsyncClient):
-    response = await ac.post("channels/channel/off", json={"number": 1})
+    with patch('app.router.ps.is_connected', return_value=True):
+        response = await ac.post("channels/channel/off", json={"number": 1})
     assert response.status_code == 200
     data = response.json()
     assert data == f"status: Channel 1 turned off"

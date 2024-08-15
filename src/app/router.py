@@ -32,6 +32,7 @@ async def get_telemetry(channel_id: int):
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
+
 @router.post("/channel/on")
 async def turn_channel_on(params: Channel) -> str:
     try:
