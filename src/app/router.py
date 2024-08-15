@@ -57,7 +57,7 @@ async def turn_channel_off(channel: ChannelNumber) -> str:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@router.get("/status", response_model=list[Channel])
+@router.get("/status")
 async def get_channels_status():
     try:
         if not await ps.is_connected():

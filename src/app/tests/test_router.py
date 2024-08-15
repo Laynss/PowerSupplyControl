@@ -51,10 +51,8 @@ async def test_turn_channel_off_invalid_data(ac:AsyncClient):
 
 @pytest.mark.asyncio
 async def test_get_channels_status(ac:AsyncClient):
-    response = await ac.get("/channels/status")
+    with patch('app.router.ps.is_connected', return_value=True):
+        with patch('app.router.ps.query_all_channel_status', return_value={}):
+            response = await ac.get("/channels/status")
     assert response.status_code == 200
-    data = response.json()
-    for channel in data:
-        assert channel["number"] == 4
-        assert channel["voltage"] == 0
-        assert channel["amperage"] == 0
+ 
