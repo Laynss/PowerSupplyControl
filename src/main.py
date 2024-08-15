@@ -1,8 +1,7 @@
-from fastapi import FastAPI
 import uvicorn
+from fastapi import FastAPI
 
 from app.router import router as channel_routers
-
 
 app = FastAPI()
 

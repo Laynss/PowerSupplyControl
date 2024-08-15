@@ -1,9 +1,19 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+import datetime
 import logging
+import os
 
+from dotenv import load_dotenv
+from fastapi import APIRouter, Depends, HTTPException, status
+
+from .power_supply import PowerSupply
 from .schemas import Channel, ChannelNumber
-from .dependencies import valid_channel_by_id
-from .services import send_scpi_command, get_channel_info
+from .services import get_channel_info
+
+load_dotenv()
+
+power_supply_host = os.getenv("POWER_SUPPLY_HOST")
+power_supply_port = os.getenv("POWER_SUPPLY_PORT")
+ps = PowerSupply(host=power_supply_host, port=power_supply_port)
 
 logging.basicConfig(filename='telemetry.log', level=logging.INFO, format='%(asctime)s - %(message)s')
 
@@ -11,17 +21,25 @@ router = APIRouter(prefix='/channels', tags=['Источник питания'])
 
 
 @router.get("/info/{channel_id}", response_model=Channel)
-async def get_telemetry(channel: Channel = Depends(valid_channel_by_id)):
-    logging.info(f"Telemetry channel: {channel.number}, Amperage: {channel.amperage}, Voltage: {channel.voltage}")
-    return channel
-
+async def get_telemetry(channel_id: int):
+    try:
+        if not await ps.is_connected():
+            await ps.connect()
+        channel = await get_channel_info(channel_id)
+        log_message = f"{datetime.datetime.now()} - Power supply channel: {channel.number}, Amperage: {channel.amperage}, Voltage: {channel.voltage}"
+        logging.info(log_message)
+        return channel
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 @router.post("/channel/on")
 async def turn_channel_on(params: Channel) -> str:
     try:
-        await send_scpi_command(f"SOURCE{params.voltage}:AMPERAGE {params.voltage}")
-        await send_scpi_command(f"SOURCE{params.amperage}:VOLTAGE {params.amperage}")
-        await send_scpi_command(f"OUTPUT{params.number}:STATE ON")
+        if not await ps.is_connected():
+            await ps.connect()
+        await ps.set_channel_voltage(params.number, params.voltage)
+        await ps.set_channel_current(params.number, params.amperage)
+        await ps.enable_channel_output(params.number)
         return f"status: Channel {params.number} turned on"
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
@@ -30,7 +48,9 @@ async def turn_channel_on(params: Channel) -> str:
 @router.post("/channel/off")
 async def turn_channel_off(channel: ChannelNumber) -> str:
     try:
-        await send_scpi_command(f"OUTPUT{channel.number}:STATE OFF")
+        if not await ps.is_connected():
+            await ps.connect()
+        await ps.disable_channel_output(channel)
         return f"status: Channel {channel.number} turned off"
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
@@ -39,10 +59,9 @@ async def turn_channel_off(channel: ChannelNumber) -> str:
 @router.get("/status", response_model=list[Channel])
 async def get_channels_status():
     try:
-        status = []
-        for channel_id in range(1, 5):  # Предполагаем, что у нас 4 канала
-            channel = await get_channel_info(channel_id)
-            status.append(channel)
-        return status
+        if not await ps.is_connected():
+            await ps.connect()
+        status = await ps.query_all_channel_status()
+        return {"status": status}
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
