@@ -1,3 +1,5 @@
+"""Маршруты API."""
+
 import datetime
 import logging
 import os
@@ -22,10 +24,13 @@ router = APIRouter(prefix='/channels', tags=['Источник питания'])
 
 @router.get("/info/{channel_id}", response_model=Channel)
 async def get_telemetry(channel_id: int):
+    """Получить информацию канала питания."""
     try:
         if not await ps.is_connected():
             await ps.connect()
         channel = await get_channel_info(channel_id)
+        if channel.voltage is None or channel.amperage is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Power Supply not found")
         log_message = f"{datetime.datetime.now()} - Power supply channel: {channel.number}, Amperage: {channel.amperage}, Voltage: {channel.voltage}"
         logging.info(log_message)
         return channel
@@ -35,6 +40,8 @@ async def get_telemetry(channel_id: int):
 
 @router.post("/channel/on")
 async def turn_channel_on(params: Channel) -> str:
+    """Включить канала питания."""
+
     try:
         if not await ps.is_connected():
             await ps.connect()
@@ -48,6 +55,8 @@ async def turn_channel_on(params: Channel) -> str:
 
 @router.post("/channel/off")
 async def turn_channel_off(channel: ChannelNumber) -> str:
+    """Отключить канал питания."""
+
     try:
         if not await ps.is_connected():
             await ps.connect()
@@ -59,6 +68,8 @@ async def turn_channel_off(channel: ChannelNumber) -> str:
 
 @router.get("/status")
 async def get_channels_status():
+    """Получить информацию по всем каналам питания."""
+
     try:
         if not await ps.is_connected():
             await ps.connect()

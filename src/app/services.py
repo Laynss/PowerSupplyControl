@@ -1,3 +1,5 @@
+"""Сервисы."""
+
 from fastapi import HTTPException, status
 
 from .power_supply import PowerSupply

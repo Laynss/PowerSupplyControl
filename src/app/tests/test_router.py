@@ -1,18 +1,16 @@
+"""Тесты API."""
+
 from unittest.mock import patch
 
 import pytest
 from httpx import AsyncClient
 
 from app.schemas import Channel
-from main import app
 
 
 @pytest.mark.asyncio
 async def test_get_telemetry(ac:AsyncClient):
-    channel = Channel
-    channel.number = 5
-    channel.voltage = 4
-    channel.amperage = 1
+    channel = Channel(number=5, voltage=4, amperage=1)
     with patch('app.router.ps.is_connected', return_value=True):
          with patch('app.router.get_channel_info', return_value=channel):
             response = await ac.get("/channels/info/1")
