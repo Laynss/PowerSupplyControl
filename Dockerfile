@@ -6,7 +6,7 @@ WORKDIR /fastapi_app
 
 COPY pyproject.toml poetry.lock README.md .
 
-RUN pip install poetry
+RUN pip install --no-cache-dir poetry
 
 RUN poetry config virtualenvs.create false
 

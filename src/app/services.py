@@ -1,17 +1,18 @@
+"""Сервисы."""
+
 from fastapi import HTTPException, status
 
+from .power_supply import PowerSupply
 from .schemas import Channel
 
-async def send_scpi_command(params: str) -> None:
-    # Мокаю, возвращаю None
-    return None
 
-    
-async def get_channel_info(channel_id: int) -> Channel:
-    voltage = await send_scpi_command(f"MEASURE{channel_id}:VOLTAGE?")
-    amperage = await send_scpi_command(f"MEASURE{channel_id}:AMPERAGE?")
-    channel: Channel = Channel
+async def get_channel_info(ps: PowerSupply, channel_id: int) -> Channel:
+    """Получить информацию об источнике питания."""
+
+    voltage = ps.query_voltage(channel_id)
+    amperage = ps.query_current(channel_id)
+    channel = Channel
     channel.number = channel_id
-    channel.voltage = voltage if voltage else 0
-    channel.amperage = amperage if amperage else 0
+    channel.voltage = voltage
+    channel.amperage = amperage
     return channel
